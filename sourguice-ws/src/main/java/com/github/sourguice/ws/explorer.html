@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/dojo/1.8.0/dijit/themes/soria/soria.css" />
+	<link href='https://fonts.googleapis.com/css?family=Roboto:100,100italic,300,300italic,400,400italic,500,500italic,700,700italic,900,900italic' rel='stylesheet' type='text/css' />
+	<link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:200,300,400,600,700,900' rel='stylesheet' type='text/css' />
+
+	<script>dojoConfig = {parseOnLoad: true}</script>
+	<script src="//ajax.googleapis.com/ajax/libs/dojo/1.8.0/dojo/dojo.js"></script>
+	<script>
+		require([
+		 		"dojo/parser",
+		 		"dijit/layout/BorderContainer",
+		 		"dijit/layout/TabContainer",
+		 		"dijit/layout/ContentPane",
+		 		"dijit/form/FilteringSelect",
+		 		"dijit/form/ValidationTextBox",
+		 		"dijit/form/RadioButton",
+		 		"dijit/form/CheckBox"
+		 		]
+ 		);
+	</script>
+	<script>
+		var description = null;
+		var rpcId = 0;
+
+		function resetTabs() {
+			require(
+			  ["dojo/dom", "dijit/registry", "dojo/domReady!"],
+			function(dom,         registry) {
+				registry.findWidgets(dom.byId("form-tab")).forEach(function(widget) {
+					widget.destroyRecursive();
+				});
+				registry.findWidgets(dom.byId("json-tab")).forEach(function(widget) {
+					widget.destroyRecursive();
+				});
+				dom.byId("form-tab").innerHTML = "<h1>Please select a method</h1>";
+				dom.byId("json-tab").innerHTML = "<h1>Please select a method</h1>";
+			});
+		}
+		resetTabs();
+
+		function fillTd(td, type, prefix, paramName, allowObject) {
+			require(
+			  ["dojo/dom", "dojo/dom-attr", "dojo/dom-construct", "dojo/store/Memory", "dijit/registry", "dijit/form/CheckBox", "dijit/form/Button", "dijit/form/ValidationTextBox", "dijit/form/TextBox", "dijit/form/FilteringSelect"],
+			function(dom,        domAttr,         domConstruct,               Memory,         registry,              CheckBox,              Button,              ValidationTextBox,              TextBox,              FilteringSelect) {
+	 			switch (type.type) {
+				case "BOOLEAN_P":
+				case "BOOLEAN_O":
+					var input = new CheckBox({
+						id: prefix + "value_" + paramName,
+						value: "1",
+						checked: true,
+						paramName: paramName,
+						prefix: prefix,
+						onChange: function(e) { domAttr.set(dom.byId(this.prefix + 'label_' + this.paramName), 'innerHTML', e); }
+					});
+					input.placeAt(td);
+					domConstruct.create("label", {"for": "value_" + paramName, id: prefix + 'label_' + paramName, innerHTML: true}, td, "last");
+					break ;
+				case "INT_P":
+				case "INT_O":
+					var input = new ValidationTextBox({
+						id: prefix + "value_" + paramName,
+						regExp: "\\-?\\d+",
+						value: 0,
+						style: "width: 5em;"
+					});
+					input.placeAt(td);
+					break ;
+				case "FLOAT_P":
+				case "FLOAT_O":
+					var input = new ValidationTextBox({
+						id: prefix + "value_" + paramName,
+						regExp: "\\-?\\d+(\\.\\d+)?",
+						value: 0,
+						style: "width: 5em;"
+					});
+					input.placeAt(td);
+					break ;
+				case "STRING":
+					var input = new TextBox({
+						id: prefix + "value_" + paramName
+					});
+					input.placeAt(td);
+					break ;
+				case "LIST":
+			        var input = new Button({
+			            label: "+",
+						paramName: paramName,
+						prefix: prefix,
+						n: 0,
+						type: type.collectionType,
+						td: td,
+			            onClick: function(){
+			            	var div = domConstruct.create("div", { id: this.prefix + "value_" + this.paramName + "_" + this.n, "class": "collectionContainer" }, this.domNode, "before");
+			            	div.number = this.n;
+			            	fillTd(div, this.type, this.prefix, this.prefix + this.paramName + "_" + this.n, true);
+
+			            	var remove = new Button({
+					            label: "-",
+					            div: div,
+					            onClick: function(){
+									registry.findWidgets(this.div).forEach(function(widget) {
+										widget.destroyRecursive();
+									});
+									domConstruct.destroy(this.div);
+					            }
+					        });
+					        remove.placeAt(div, "first");
+
+			            	++this.n;
+			            }
+			        });
+			        input.placeAt(td);
+					break ;
+				case "MAP":
+			        var input = new Button({
+			            label: "+",
+						paramName: paramName,
+						prefix: prefix,
+						n: 0,
+						type: type.collectionType,
+						td: td,
+			            onClick: function() {
+			            	var mapdiv = domConstruct.create("div", { id: this.prefix + "value_" + this.paramName + "_" + this.n, "class": "collectionContainer" }, this.domNode, "before");
+			            	mapdiv.number = this.n;
+				            
+			            	var maptable = domConstruct.create("table", { id: this.prefix + "value_" + this.paramName + "_" + this.n}, mapdiv, "last");
+			            	
+			            	var maptr = domConstruct.create("tr", {}, maptable, "last");
+			            	domConstruct.create("th", { innerHTML: "Key" }, maptr, "last");
+			            	var maptd = domConstruct.create("td", {}, maptr, "last");
+							var key = new TextBox({
+								id: prefix + "key_" + paramName + "_" + this.n
+							});
+							key.placeAt(maptd);
+			            	var maptr = domConstruct.create("tr", {}, maptable, "last");
+			            	domConstruct.create("th", { innerHTML: "Value" }, maptr, "last");
+			            	var maptd = domConstruct.create("td", {}, maptr, "last");
+			            	fillTd(maptd, this.type, this.prefix, this.prefix + this.paramName + "_" + this.n, true);
+
+			            	var remove = new Button({
+								label: "-",
+								div: mapdiv,
+								onClick: function(){
+									registry.findWidgets(this.div).forEach(function(widget) {
+										widget.destroyRecursive();
+									});
+									domConstruct.destroy(this.div);
+								}
+							});
+							remove.placeAt(mapdiv, "first");
+
+							++this.n;
+			            }
+			        });
+			        input.placeAt(td);
+					break ;
+				case "ENUM":
+					var store = new Memory();
+					for (n in description.enumTypes[type.ref].values) {
+						var v = description.enumTypes[type.ref].values[n];
+						store.add({name: v, id: v});
+	 				}
+					var input = new FilteringSelect({
+						id: prefix + "value_" + paramName,
+						store: store,
+						value: description.enumTypes[type.ref][0]
+					});
+					input.placeAt(td);
+					break ;
+				case "OBJECT":
+					if (allowObject)
+						domConstruct.place(createTable(description.objectTypes[type.ref].properties, prefix + paramName + "_", false), td, "last");
+					break ;
+				} // End Switch 
+			}); // End require 
+		}
+		
+		function createTable(node, prefix, allowObject) {
+			//require(["dojo/json"], function(json){ alert(json.stringify(node)); });
+			var table = null;
+			require(
+			  ["dojo/dom", "dojo/dom-attr", "dijit/registry", "dojo/dom-construct", "dojo/dom-style", "dojo/query", "dijit/form/CheckBox" ],
+			function(dom,        domAttr,          registry,        domConstruct,         domStyle,         query,              CheckBox) {
+				table = domConstruct.create("table", {id: prefix + "formTable"});
+				for (paramName in node) {
+					var realType = (prefix == "") ? node[paramName].type : node[paramName];
+
+					var tr = domConstruct.create("tr", {}, table, "last");
+					var th = domConstruct.create("th", {innerHTML: paramName}, tr, "last");
+
+					var td = domConstruct.create("td", {id: prefix + "td_null_" + paramName}, tr, "last");
+					if (prefix != "" || node[paramName].type.nullable) {
+						var cb = new CheckBox({
+							id: prefix + "null_" + paramName,
+							value: "1",
+							checked: prefix != "" && (realType.type == "OBJECT" || realType.type == "LIST" || realType.type == "MAP"),
+							paramName: paramName,
+							prefix: prefix,
+							type: realType,
+							allowNextRebuild: true,
+							onChange: function(enabled) {
+								enabled = !enabled;
+								if (!enabled) {
+									registry.findWidgets(dom.byId(this.prefix + "td_value_" + this.paramName)).forEach(function(widget) {
+										widget.destroyRecursive();
+									});
+									domConstruct.empty(this.prefix + "td_value_" + this.paramName);
+								}
+								else if (this.allowNextRebuild)
+									fillTd(dom.byId(this.prefix + "td_value_" + this.paramName), this.type, this.prefix, this.paramName, true);
+								this.allowNextRebuild = true;
+							}
+						});
+						cb.placeAt(td);
+						domConstruct.create("label", {"for": prefix + "null_" + paramName, innerHTML: "null"}, td, "last");
+					}
+
+					var td = domConstruct.create("td", {id: prefix + "td_value_" + paramName}, tr, "last");
+					//if (prefix == "")
+						fillTd(td, realType, prefix, paramName, allowObject);
+				} // End for 
+			}); // End require 
+			return table;
+		};
+
+		function constructJsonNode(type, prefix, paramName) {
+			var ret = null;
+			require(
+			   ["dojo/query", "dijit/registry"],
+			function (query,         registry) {
+				switch (type.type) {
+				case "BOOLEAN_P":
+				case "BOOLEAN_O":
+					ret = registry.byId(prefix + "value_" + paramName).get('checked');
+					return ;
+				case "INT_P":
+				case "INT_O":
+					ret = parseInt(registry.byId(prefix + "value_" + paramName).get('value'));
+					return ;
+				case "FLOAT_P":
+				case "FLOAT_O":
+					ret = parseFloat(registry.byId(prefix + "value_" + paramName).get('value'));
+					return ;
+				case "STRING":
+					ret = registry.byId(prefix + "value_" + paramName).get('value');
+					return ;
+				case "LIST":
+					ret = new Array();
+					query(".collectionContainer", prefix + "td_value_" + paramName).forEach(function(div) {
+						ret.push(constructJsonNode(type.collectionType, prefix, prefix + paramName + "_" + div.number));
+					});
+					return ;
+				case "MAP":
+					ret = {};
+					query(".collectionContainer", prefix + "td_value_" + paramName).forEach(function(div) {
+						var key = registry.byId(prefix + "key_" + paramName + "_" + div.number).get('value');
+						var val = constructJsonNode(type.collectionType, prefix, prefix + paramName + "_" + div.number);
+						ret[key] = val;
+					});
+					return ;
+				case "ENUM":
+					ret = dijit.byId(prefix + "value_" + paramName).get('value');
+					return ;
+				case "OBJECT":
+					ret = constructJson(description.objectTypes[type.ref].properties, paramName + "_");
+					return ;
+				}
+			});
+			return ret;
+		}
+		
+		function constructJson(node, prefix) {
+			var ret = {};
+			require(
+			   ["dojo/query", "dijit/registry", "dojo/json"],
+			function (query,         registry,        json) {
+				var method = registry.byId('method').get('value');
+				for (var paramName in node) {
+					var nullCB = dijit.byId(prefix + "null_" + paramName);
+					if (nullCB && nullCB.get('checked'))
+						continue ;
+
+					var type = (prefix == "") ? node[paramName].type : node[paramName];
+					ret[paramName] = constructJsonNode(type, prefix, paramName);
+				}
+			});
+			return ret;
+		}
+		
+		require(
+		  ["dojo/request"],
+		function(request) {
+			request("description", {handleAs: "json"}).then(
+					// OK 
+					function(data) {
+						description = data;
+						require(
+						  ["dojo/dom", "dojo/dom-style", "dojo/dom-construct", "dijit/registry", "dojo/ready", "dijit/focus"],
+						function(dom,        domStyle,         domConstruct,          registry,        ready,         focus) {
+							ready(function() {
+								dom.byId("wsname").innerText = data.name;
+								registry.byId("version").set('value', data.defaultVersion);
+								domConstruct.destroy("loading");
+								domStyle.set("borderContainer", 'opacity', 1);
+								focus.focus(dom.byId("method"));
+							}); // End ready 
+						}); // End require 
+					}, // End OK 
+					// Error 
+					function(err) {
+						alert("ERROR: " + err);
+					} // End Error 
+			); // End request 
+		}); // End require 
+
+		require(
+		  ["dojo/request", "dojo/dom", "dojo/dom-attr", "dojo/dom-construct", "dojo/on", "dijit/registry", "dijit/TitlePane", "dojo/ready", "dojo/json", "dojo/store/Memory", "dojo/keys", "dojo/_base/event"],
+		function(request,        dom,        domAttr,         domConstruct,         on,         registry,         TitlePane,        ready,        json,              Memory,        keys,              event) {
+			ready(function() {
+				on(registry.byId("version"), "Change", function(e) {
+					var store = new Memory();
+					var sorted = Object.keys(description.methods).sort();
+					for(var i = 0; i < sorted.length; ++i) {
+						var method = sorted[i];
+						if (description.methods[method].until && description.methods[method].until < e)
+							continue ;
+						if (description.methods[method].since && description.methods[method].since > e)
+							continue ;
+						store.add({name: method, id: method});
+					}
+					var select = registry.byId("method");
+					select.set('store', store);
+					if (!store.get(select.get('value')))
+						select.set('value', '');
+				}); // End on version change function 
+				
+				var currentMethod;
+				
+				on(registry.byId("method"), "Change", function(e) {
+					resetTabs();
+					if (e == "")
+						return ;
+
+					if (description.methods[e].plugins && description.methods[e].plugins.aaUpload)
+						registry.byId("upload").set("disabled", false);
+					else {
+						registry.byId("upload").set("checked", false);
+						registry.byId("upload").set("disabled", true);
+					}
+					
+					domConstruct.empty("form-tab");
+					domConstruct.place(createTable(description.methods[e].params, "", true), "form-tab", "last");
+					var node = null;
+					var array = dom.byId("form-tab").getElementsByTagName("input");
+					for (var i = 0; i < array.length; ++i)
+						if (array[i].id) {
+							node = array[i];
+							break ;
+						}
+					if (node)
+						registry.byId(node.id).focusNode.select();
+					domConstruct.empty("json-tab");
+					domConstruct.create("textarea", { id: "json" }, "json-tab", "last");
+					currentMethod = registry.byId("method").value;
+				}); // End on mehtod change function 
+
+				function sendClicked() {
+					var method = registry.byId('method').get('value');
+					ret = constructJson(description.methods[method].params, "");
+					var jsonTA = dom.byId('json');
+					if (registry.byId('tabs').get('selectedChildWidget').id == 'form-tab')
+						domAttr.set(jsonTA, 'value', json.stringify(ret, null, "  "));
+
+					var jsonText = domAttr.get(jsonTA, 'value');
+					try {
+						json.parse(jsonText);
+					}
+					catch (err) {
+						alert("JSON Error: " + err);
+						return ;
+					}
+
+					var codeResult = dom.byId('codeResult');
+					domConstruct.empty(codeResult);
+
+					var url = null;
+					var post = { method: "post" };
+					if (registry.byId('rpc').get('checked')) {
+						url = description.baseUrl + "/rpc/" + registry.byId('version').get('value');
+						post.data = json.stringify(
+							[{
+								id: "explorer-" + rpcId,
+								method: registry.byId('method').get('value'),
+								params: json.parse(jsonText)
+							}],
+						null, "  ");
+						++rpcId;
+					}
+					else if (registry.byId('rest').get('checked')) {
+						url = description.baseUrl + "/rest/" + registry.byId('version').get('value') + "/" + registry.byId('method').get('value');
+						post.data = jsonText;
+					}
+					if (registry.byId('upload').get('checked'))
+						url += "/upload";
+					tp = new dijit.TitlePane({title:"<h2>" + url + "</h2>", content: "<pre>" + post.data + "</pre>", open: false});
+					tp.placeAt(codeResult, "last");
+					var req = request(url, post).then(
+						// OK 
+						function(data) {
+							data = json.parse(data);
+							var dataText = "null";
+							if (data != null && data != "null")
+								dataText = json.stringify(data, null, "  ");
+							domConstruct.create("pre", { innerHTML: dataText }, codeResult, "last");
+							if (registry.byId('upload').get('checked')) {
+								domConstruct.create("hr", {}, codeResult, "last");
+								var iframe = domConstruct.create("iframe", {}, codeResult, "last");
+								var form = domConstruct.create("form", { action: data.url, method: "POST", enctype: "multipart/form-data" }, iframe.contentDocument.body, "last");
+								for (name in data.uploads) {
+									var p = domConstruct.create("p", {}, form, "last");
+									domConstruct.create("label", { "for": name, innerHTML: name + ": " }, p, "last");
+									domConstruct.create("input", { type: "file", name: name, id: name }, p, "last");
+								}
+								domConstruct.create("button", { type: "submit", innerHTML: "Upload!" }, form, "last");
+								on(iframe, "load", function(e) {
+ 									var html = iframe.contentDocument.body.innerHTML;
+ 									var txt = iframe.contentDocument.body.innerText;
+									domConstruct.destroy(iframe);
+									var div = domConstruct.create("div", { innerHTML: html }, codeResult, "last");
+									var jsonTxt = json.parse(txt);
+									if (jsonTxt) {
+										domConstruct.destroy(div);
+										domConstruct.create("pre", { innerHTML: json.stringify(jsonTxt, null, "  ") }, codeResult, "last");
+									}
+								});
+							}
+						},
+						// ERROR 
+						function(err) {
+							if (err.response.status == 406) {
+								domConstruct.create("h2", { innerHTML: "Exception!" }, codeResult, "last");
+								domConstruct.create("pre", { innerHTML: json.stringify(json.parse(err.response.data), null, "  ") }, codeResult, "last");
+							}
+							else if (err.response.status == 460) {
+								domConstruct.create("h2", { innerHTML: "General Exception!" }, codeResult, "last");
+								domConstruct.create("pre", { innerHTML: json.stringify(json.parse(err.response.data), null, "  ") }, codeResult, "last");
+							}
+							else if (err.response.status == 400) {
+								domConstruct.create("h2", { innerHTML: "Call Error!" }, codeResult, "last");
+								var div = domConstruct.create("div", { innerHTML: err.response.data.replace("h2", "p") }, codeResult, "last");
+								var jsonTxt = json.parse(err.response.data);
+								if (jsonTxt) {
+									domConstruct.destroy(div);
+									domConstruct.create("pre", { innerHTML: json.stringify(jsonTxt, null, "  ") }, codeResult, "last");
+								}
+							}
+							else {
+								domConstruct.create("div", { innerHTML: err.response.data }, codeResult, "last");
+							}
+						}
+					);
+				}
+				
+				on(dom.byId("form"), "submit", function(e) {
+					event.stop(e);
+					if (currentMethod != registry.byId("method").value)
+						return false;
+					sendClicked();
+					return false;
+				});
+			}); // End ready 
+		}); // End require 
+	</script>
+	
+	<style type="text/css">
+		html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow:hidden;
+		}
+
+		body {
+			background: #EEE;
+			font-family: 'Roboto', sans-serif;
+		}
+
+		h1 {
+			font-weight: 500;
+		}
+
+		* input, * textarea, .dijitTextBox, .dijitComboBoxMenu {
+			font-family: 'Source Code Pro', sans-serif;
+		}
+		
+		label, .dijitCheckBox, .dijitCheckBoxInput {
+			cursor: pointer;
+		}
+
+		h1#loading {
+			position: absolute;
+			width: 100%;
+			padding-top: 5em;
+			text-align: center;
+			font-style: italic;
+	    	z-index: 2;
+		}
+		
+		div#toplayout {
+			padding: 0.5em 4em 0.5em 2em;
+		}
+		
+		h2#wsname {
+			float: right;
+			padding: 0;
+			margin: 0;
+		}
+		
+		div#borderContainer {
+		    width: 100%;
+	    	height: 100%;
+	    	z-index: 1;
+	    	opacity: 0;
+		}
+		
+		div#codeResult {
+			width: 21em;
+			font-family: 'Source Code Pro', sans-serif;
+		}
+		
+		div#codeResult iframe {
+			display: block;
+			width: 98%;
+			margin: auto;
+			height: 21em;
+		}
+		
+		div#form-tab, div#json-tab {
+			padding: 2em;
+		}
+
+		table#formTable, table#formTable table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+		
+		table#formTable table.collectionContainer tr td, table#formTable table.collectionContainer tr th {
+			border: none;
+			background-color: transparent;
+			padding: 0.4em 0.8em;
+		}
+
+		table#formTable tr th, table#formTable tr td {
+			border: solid black 1px;
+			border-width: 1px 0;
+			padding: 0.8em 1.6em;
+		}
+		
+		table#formTable tr th {
+			text-align: right;
+			background-color: #EEE;
+		}
+		
+		table#formTable div.collectionContainer {
+			padding-bottom: 0.5em;
+			margin-bottom: 0.5em;
+			border-bottom: dashed #888 2px;
+		}
+		
+		textarea#json {
+			display: block;
+			margin: 0 auto;
+			width: 98%;
+			height: 98%;
+			font-size: 1em;
+		}
+		
+		.dijitTitlePaneTextNode h2 {
+			display: inline-block;
+			margin: 0;
+			font-size: 1.1em;
+		}
+	</style>
+</head>
+<body class="soria">
+	<h1 id="loading">Loading...</h1>
+	<div
+		data-dojo-type="dijit/layout/BorderContainer"
+		data-dojo-props="gutters:true, liveSplitters:true"
+		id="borderContainer"
+	>
+		<form action="#" id="form">
+			<div
+				data-dojo-type="dijit/layout/ContentPane"
+				data-dojo-props="
+					region:'top',
+					splitter:false
+				"
+				id="toplayout"
+			>
+				<h2 id="wsname">Name</h2>
+				Version:
+				<input
+					data-dojo-type="dijit/form/ValidationTextBox"
+					id="version"
+					style="width: 5em"
+					data-dojo-props="
+						required: true,
+						regExp:'[\\d]+(\\.[\\d]+)?'
+					" 
+				/>
+				&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+				Method:
+				<select
+					data-dojo-type="dijit/form/FilteringSelect"
+					id="method"
+					data-dojo-props="
+						required: true,
+						autoWidth: true
+					" 
+				>
+				</select>
+				&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+				<input
+					data-dojo-type="dijit/form/RadioButton"
+					type="radio"
+					id="rest"
+					name="callType"
+					checked="checked"
+				/>
+				<label for="rest">REST</label>
+				&nbsp;
+				<input
+					data-dojo-type="dijit/form/RadioButton"
+					type="radio"
+					id="rpc"
+					name="callType"
+				/>
+				<label for="rpc">RPC</label>
+				&nbsp;
+				<input
+					data-dojo-type="dijit/form/CheckBox"
+					type="checkbox"
+					id="upload"
+					name="upload"
+					disabled="disabled"
+				/>
+				<label for="upload">Upload</label>
+				&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+				<button data-dojo-type="dijit/form/Button" id="send" type="submit">Send</button>
+			</div>
+			<div
+				data-dojo-type="dijit/layout/TabContainer"
+				style="width: 100%; height: 100%;"
+				data-dojo-props="region:'center'"
+				id="tabs"
+			>
+				<div
+					data-dojo-type="dijit/layout/ContentPane"
+					data-dojo-props="selected:true"
+					title=" &nbsp; Form &nbsp; "
+					id="form-tab"
+				>
+				</div>
+				<div
+					data-dojo-type="dijit/layout/ContentPane"
+					title=" &nbsp; Json &nbsp; "
+					id="json-tab"
+				>
+				</div>
+			</div>
+			<div
+				data-dojo-type="dijit/layout/ContentPane"
+				style="width: 42%;"
+				data-dojo-props="
+					splitter:true,
+					region:'right'
+				"
+				id="codeResult"
+			>
+			</div>
+		</form>
+	</div>
+</body>
+</html>
+

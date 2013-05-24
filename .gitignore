@@ -1,0 +1,9 @@
+.metadata/
+.settings/
+*~
+.DS_Store
+*.class
+
+build/
+target/
+test-output/
