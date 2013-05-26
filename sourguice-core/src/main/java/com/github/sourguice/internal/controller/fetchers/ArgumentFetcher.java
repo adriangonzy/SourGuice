@@ -65,6 +65,7 @@ public abstract class ArgumentFetcher<T> {
 	 * @param additionalFetchers Any additional fetcher provided at "call-time" directly by the user
 	 * @return The argument to be passed to the MVC invocation
 	 * @throws NoSuchRequestParameterException In case of a parameter asked from request argument or path variable that does not exists
+	 * @throws Throwable Any exception that would be thrown by a fetcher
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public @CheckForNull T get(HttpServletRequest req, @PathVariablesMap Map<String, String> pathVariables, Injector injector, CalltimeArgumentFetcher<?>[] additionalFetchers) throws Throwable {
@@ -85,7 +86,10 @@ public abstract class ArgumentFetcher<T> {
 	 * @throws NoSuchRequestParameterException In case of a parameter asked from request argument or path variable that does not exists
 	 */
 	protected abstract @CheckForNull T getPrepared(HttpServletRequest req, @PathVariablesMap Map<String, String> pathVariables, Injector injector) throws Throwable;
-	
+
+	/**
+	 * @return The type of the argument to fetch
+	 */
 	public Type getType() {
 		return type;
 	}

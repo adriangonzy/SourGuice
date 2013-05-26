@@ -20,6 +20,10 @@ import com.github.sourguice.annotation.request.PathVariablesMap;
 import com.github.sourguice.call.MvcCaller;
 import com.github.sourguice.call.impl.MvcCallerImpl;
 import com.github.sourguice.call.impl.PathVariablesProvider;
+import com.github.sourguice.controller.ControllerHandlersRepository;
+import com.github.sourguice.controller.ControllerInterceptor;
+import com.github.sourguice.controller.ControllersServlet;
+import com.github.sourguice.controller.InterceptWithMatcher;
 import com.github.sourguice.conversion.ConversionService;
 import com.github.sourguice.conversion.def.BooleanConverter;
 import com.github.sourguice.conversion.def.DoubleConverter;
@@ -33,10 +37,6 @@ import com.github.sourguice.conversion.impl.ConversionServiceImpl;
 import com.github.sourguice.exception.ExceptionService;
 import com.github.sourguice.exception.def.MVCHttpServletResponseExceptionHandler;
 import com.github.sourguice.exception.impl.ExceptionServiceImpl;
-import com.github.sourguice.internal.controller.ControllerHandlersRepository;
-import com.github.sourguice.internal.controller.ControllerInterceptor;
-import com.github.sourguice.internal.controller.ControllersServlet;
-import com.github.sourguice.internal.controller.InterceptWithMatcher;
 import com.github.sourguice.request.ForwardableRequestFactory;
 import com.github.sourguice.request.wrapper.GuiceForwardHttpRequest;
 import com.github.sourguice.throwable.controller.MVCHttpServletResponseException;
@@ -85,17 +85,15 @@ public class MvcServletModuleHelperImpl implements MvcServletModuleHelperProxy {
 	}
 
 	/**
-	 * Used by {@link MvcServletModule#getForwardableRequestFactory(HttpServletRequest, ServletContext)}
-	 * to get a ForwardableRequestFactory implementation
+	 * {@inheritDoc}
 	 */
 	@Override
 	public ForwardableRequestFactory getForwardableRequestFactory(@GuiceRequest HttpServletRequest req, ServletContext context) {
 		return new GuiceForwardHttpRequest(req, context);
 	}
-	
+
 	/**
-	 * Used by {@link MvcServletModule#configureServlets()}
-	 * to actually configure servlets and bind objects
+	 * {@inheritDoc}
 	 */
 	@Override
 	public final void configureServlets() {
@@ -200,10 +198,7 @@ public class MvcServletModuleHelperImpl implements MvcServletModuleHelperProxy {
 	}
 
 	/**
-	 * First method of the syntax control(pattern).with(controller.class)
-	 * 
-	 * @param pattern The pattern to register for the later controller
-	 * @param patterns Any additional patterns to register
+	 * {@inheritDoc}
 	 */
 	@Override
 	public final ControlBuilder control(final String pattern, final String... patterns) {
@@ -220,10 +215,7 @@ public class MvcServletModuleHelperImpl implements MvcServletModuleHelperProxy {
 	}
 	
 	/**
-	 * First method of the syntax redirect(pattern).to(path)
-	 * 
-	 * @param pattern The pattern to redirect to the later path
-	 * @param patterns Any additional patterns to redirect
+	 * {@inheritDoc}
 	 */
 	@Override
 	public final RedirectBuilder redirect(final String pattern, final String... patterns) {

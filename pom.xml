@@ -4,10 +4,11 @@
 
 	<groupId>com.github.sourguice</groupId>
 	<artifactId>sourguice-parent</artifactId>
-	<name>
+	<name>SourGuice</name>
+    <description>
       SourGuice is a full MVC stack that is is based on Guice DI.
       It's API is close to Spring's philosophy but uses Guice simplicity.
-     </name>
+    </description>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<url>https://github.com/SalomonBrys/SourGuice</url>
@@ -86,12 +87,12 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.mortbay.jetty</groupId>
+			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-servlet-tester</artifactId>
-			<version>6.1H.22</version>
+			<version>7.0.0.M2</version>
 			<scope>test</scope>
 		</dependency>
-
+		
 	</dependencies>
 
 	<build>

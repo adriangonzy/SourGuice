@@ -1,4 +1,4 @@
-package com.github.sourguice.internal.controller;
+package com.github.sourguice.controller;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -19,7 +19,7 @@ import com.github.sourguice.annotation.controller.Redirects;
 import com.github.sourguice.annotation.controller.SendsError;
 import com.github.sourguice.annotation.request.Writes;
 import com.github.sourguice.call.impl.MvcCallerImpl;
-import com.github.sourguice.internal.controller.ControllerHandler.InvocationInfos;
+import com.github.sourguice.controller.ControllerHandler.InvocationInfos;
 import com.github.sourguice.request.wrapper.NoJsessionidHttpRequest;
 import com.github.sourguice.throwable.invocation.HandledException;
 import com.github.sourguice.throwable.invocation.NoSuchRequestParameterException;

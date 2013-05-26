@@ -34,6 +34,7 @@ public class JSPViewRenderer implements ViewRenderer {
 	
 	/**
 	 * @param res The current HTTP Response
+	 * @param fact Factory that will be used to make request forwarding
 	 */
 	@Inject
 	public JSPViewRenderer(HttpServletResponse res, ForwardableRequestFactory fact) {

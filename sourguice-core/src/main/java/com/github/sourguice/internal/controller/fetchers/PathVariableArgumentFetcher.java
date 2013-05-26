@@ -20,6 +20,8 @@ import com.googlecode.gentyref.GenericTypeReflector;
 /**
  * Fetcher that handles @{@link PathVariable} annotated arguments
  * 
+ * @param <T> The type of the argument to fetch
+ * 
  * @author Salomon BRYS <salomon.brys@gmail.com>
  */
 public class PathVariableArgumentFetcher<T> extends ArgumentFetcher<T> {
@@ -31,8 +33,12 @@ public class PathVariableArgumentFetcher<T> extends ArgumentFetcher<T> {
 	
 	/**
 	 * @see ArgumentFetcher#ArgumentFetcher(Type, int, Annotation[])
+	 * @param type The type of the argument to fetch
+	 * @param pos The position of the method's argument to fetch
+	 * @param annotations Annotations that were found on the method's argument
 	 * @param infos The annotations containing needed informations to fetch the argument
 	 * @param ref The reference map that links path variable name to their index when a url matches
+	 * @param check Whether or not to check that ref contains the reference to the path variable
 	 */
 	public PathVariableArgumentFetcher(Type type, int pos, Annotation[] annotations, PathVariable infos, HashMap<String, Integer> ref, boolean check) {
 		super(type, pos, annotations);

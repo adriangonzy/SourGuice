@@ -19,6 +19,8 @@ import com.googlecode.gentyref.GenericTypeReflector;
 /**
  * Fetcher that handles @{@link PathVariable} annotated arguments
  * 
+ * @param <T> The type of the argument to fetch
+ * 
  * @author Salomon BRYS <salomon.brys@gmail.com>
  */
 public class RequestHeaderArgumentFetcher<T> extends ArgumentFetcher<T> {
@@ -30,6 +32,9 @@ public class RequestHeaderArgumentFetcher<T> extends ArgumentFetcher<T> {
 	
 	/**
 	 * @see ArgumentFetcher#ArgumentFetcher(Type, int, Annotation[])
+	 * @param type The type of the argument to fetch
+	 * @param pos The position of the method's argument to fetch
+	 * @param annotations Annotations that were found on the method's argument
 	 * @param infos The annotations containing needed informations to fetch the argument
 	 */
 	public RequestHeaderArgumentFetcher(Type type, int pos, Annotation[] annotations, RequestHeader infos) {

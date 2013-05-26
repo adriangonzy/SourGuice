@@ -3,18 +3,39 @@ package com.github.sourguice.test;
 import java.io.IOException;
 import java.net.URLEncoder;
 
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.testing.HttpTester;
-import org.mortbay.jetty.testing.ServletTester;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.testing.HttpTester;
+import org.eclipse.jetty.testing.ServletTester;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 
 import com.github.sourguice.MvcServletModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import com.google.inject.servlet.GuiceServletContextListener;
 
+@SuppressWarnings("javadoc")
 public abstract class TestBase {
 
-	protected ServletTester	tester;
+	@SuppressWarnings("javadoc")
+	public static class StandardContextListener<T extends MvcServletModule> extends GuiceServletContextListener {
+
+		T module;
+		
+		public StandardContextListener(T module) {
+			super();
+			this.module = module;
+		}
+
+		@Override
+		protected Injector getInjector() {
+			return Guice.createInjector(module);
+		}
+
+	}
+
+	protected ServletTester	tester = null;
 
 	@BeforeClass
 	public void startupServletTester() throws Exception {

@@ -1,4 +1,4 @@
-package com.github.sourguice.internal.controller;
+package com.github.sourguice.controller;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.regex.MatchResult;
 
+import javax.annotation.CheckForNull;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -13,12 +14,11 @@ import com.github.sourguice.annotation.request.GuiceRequest;
 import com.github.sourguice.annotation.request.RequestMapping;
 import com.github.sourguice.request.ForwardableRequestFactory;
 import com.github.sourguice.utils.RequestScopeContainer;
+import com.github.sourguice.value.RequestMethod;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.servlet.RequestScoped;
 import com.google.inject.servlet.ServletModule;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * This class is the base guice module class to inherit
@@ -40,6 +40,7 @@ public abstract class MvcServletModule extends ServletModule {
 	 * to delegate the actual implementation and bindings.
 	 * @author salomon
 	 */
+	@SuppressWarnings("javadoc")
 	static interface MvcServletModuleHelperProxy {
 		/**
 		 * @see MvcServletModule#getForwardableRequestFactory(HttpServletRequest, ServletContext)
@@ -87,6 +88,10 @@ public abstract class MvcServletModule extends ServletModule {
 	
 	/**
 	 * Registers in guice the PrintWriter class to be binded to the request's response writer
+	 * 
+	 * @param res The current HTTP response object
+	 * @return The response writer
+	 * @throws IOException If an input or output exception occurs
 	 */
 	@Provides @RequestScoped public PrintWriter getRequestPrintWriter(HttpServletResponse res) throws IOException {
 		return res.getWriter();
@@ -94,6 +99,10 @@ public abstract class MvcServletModule extends ServletModule {
 
 	/**
 	 * Registers in guice the Writer class to be binded to the request's response writer
+	 * 
+	 * @param res The current HTTP response object
+	 * @return The response writer
+	 * @throws IOException If an input or output exception occurs
 	 */
 	@Provides @RequestScoped public Writer getRequestWriter(HttpServletResponse res) throws IOException {
 		return res.getWriter();
@@ -102,28 +111,49 @@ public abstract class MvcServletModule extends ServletModule {
 	/**
 	 * Registers in guice the HttpServletRequest class annotated with @{@link GuiceRequest}
 	 * to be binded to the Guice modified request
+	 * 
+	 * @param container The request's scoped object container
+	 * @return The guice request
 	 */
-	@SuppressFBWarnings({"TQ_NEVER_VALUE_USED_WHERE_ALWAYS_REQUIRED"})
 	@Provides @RequestScoped @GuiceRequest public HttpServletRequest getGuiceRequest(RequestScopeContainer container) {
-		return container.get(HttpServletRequest.class);
+		HttpServletRequest r = container.get(HttpServletRequest.class);
+		assert r != null;
+		return r;
 	}
 
 	/**
 	 * Registers in guice the MatchResult class to be binded to the request's URL parsed path variables
 	 * according to the request's {@link RequestMapping}
+	 * 
+	 * @param container The request's scoped object container
+	 * @return The MatchResult
 	 */
-	@Provides @RequestScoped public MatchResult getPathMatcher(RequestScopeContainer container) {
+	@Provides @RequestScoped public @CheckForNull MatchResult getPathMatcher(RequestScopeContainer container) {
 		return container.get(MatchResult.class);
 	}
 	
 	/**
 	 * Registers in guice the ForwardableRequestFactory class that easily allow servlet request forwarding
-	 * Attention: not to be confused with HTTP redirection!
+	 * Attention: Do not to be confuse Servlet redirection with HTTP redirection!
+	 * 
+	 * @param req The current HTTP request object
+	 * @param context The current Servlet Context object
+	 * @return The ForwardableRequestFactory usable for the current request
 	 */
 	@Provides @RequestScoped public ForwardableRequestFactory getForwardableRequestFactory(@GuiceRequest HttpServletRequest req, ServletContext context) {
 		return helper.getForwardableRequestFactory(req, context);
 	}
 	
+	/**
+	 * Registers in guice the RequestMethod enum to be binded to the request's method
+	 * 
+	 * @param req The current HTTP request object
+	 * @return The RequestMethod of the current request
+	 */
+	@Provides @RequestScoped public RequestMethod getRequestMethod(HttpServletRequest req) {
+		return RequestMethod.valueOf(req.getMethod());
+	}
+
 	/**
 	 * This is the method that guice requires to overrides to configure servlets.
 	 * To configure controllers or additional servlets, override {@link #configureControllers()}

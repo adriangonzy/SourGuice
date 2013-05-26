@@ -1,4 +1,4 @@
-package com.github.sourguice.internal.controller;
+package com.github.sourguice.controller;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -25,7 +25,7 @@ import com.github.sourguice.annotation.request.RequestParam;
 import com.github.sourguice.annotation.request.SessionAttribute;
 import com.github.sourguice.call.CalltimeArgumentFetcher;
 import com.github.sourguice.call.impl.PathVariablesProvider;
-import com.github.sourguice.internal.controller.ControllerHandler.InvocationInfos;
+import com.github.sourguice.controller.ControllerHandler.InvocationInfos;
 import com.github.sourguice.internal.controller.fetchers.ArgumentFetcher;
 import com.github.sourguice.internal.controller.fetchers.InjectorArgumentFetcher;
 import com.github.sourguice.internal.controller.fetchers.NullArgumentFetcher;

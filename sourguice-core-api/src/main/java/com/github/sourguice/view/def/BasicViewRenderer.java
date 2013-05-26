@@ -56,6 +56,10 @@ public abstract class BasicViewRenderer implements ViewRenderer {
 	public class NoSuchBasicViewMethodException extends RuntimeException {
 		private static final long serialVersionUID = -962911669036518369L;
 
+		/**
+		 * @param clazz The class that's missing the annotation
+		 * @param view The missing view
+		 */
 		public NoSuchBasicViewMethodException(Class<?> clazz, String view) {
 			super(clazz.getCanonicalName() + " has no method annotated with @RenderFor(\"" + view + "\")");
 		}

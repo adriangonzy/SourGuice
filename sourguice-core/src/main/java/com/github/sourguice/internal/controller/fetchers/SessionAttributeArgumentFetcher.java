@@ -14,6 +14,8 @@ import com.google.inject.Injector;
 /**
  * Fetcher that handles @{@link SessionAttribute} annotated arguments
  * 
+ * @param <T> The type of the argument to fetch
+ * 
  * @author Salomon BRYS <salomon.brys@gmail.com>
  */
 public class SessionAttributeArgumentFetcher<T> extends ArgumentFetcher<T> {
@@ -25,6 +27,9 @@ public class SessionAttributeArgumentFetcher<T> extends ArgumentFetcher<T> {
 	
 	/**
 	 * @see ArgumentFetcher#ArgumentFetcher(Type, int, Annotation[])
+	 * @param type The type of the argument to fetch
+	 * @param pos The position of the method's argument to fetch
+	 * @param annotations Annotations that were found on the method's argument
 	 * @param infos The annotations containing needed informations to fetch the argument
 	 */
 	public SessionAttributeArgumentFetcher(Type type, int pos, Annotation[] annotations, SessionAttribute infos) {
