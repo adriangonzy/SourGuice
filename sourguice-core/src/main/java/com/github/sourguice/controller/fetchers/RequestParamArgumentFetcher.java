@@ -1,4 +1,4 @@
-package com.github.sourguice.internal.controller.fetchers;
+package com.github.sourguice.controller.fetchers;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;

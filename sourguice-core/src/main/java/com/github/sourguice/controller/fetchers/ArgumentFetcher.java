@@ -1,4 +1,4 @@
-package com.github.sourguice.internal.controller.fetchers;
+package com.github.sourguice.controller.fetchers;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
@@ -84,6 +84,7 @@ public abstract class ArgumentFetcher<T> {
 	 * @param injector Guice injector
 	 * @return The argument to be passed to the MVC invocation
 	 * @throws NoSuchRequestParameterException In case of a parameter asked from request argument or path variable that does not exists
+	 * @throws Throwable Any exception that would be thrown by a fetcher
 	 */
 	protected abstract @CheckForNull T getPrepared(HttpServletRequest req, @PathVariablesMap Map<String, String> pathVariables, Injector injector) throws Throwable;
 

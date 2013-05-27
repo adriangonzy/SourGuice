@@ -54,6 +54,7 @@ public abstract class BasicViewRenderer implements ViewRenderer {
 	 * @author Salomon BRYS <salomon.brys@gmail.com>
 	 */
 	public class NoSuchBasicViewMethodException extends RuntimeException {
+		@SuppressWarnings("javadoc")
 		private static final long serialVersionUID = -962911669036518369L;
 
 		/**

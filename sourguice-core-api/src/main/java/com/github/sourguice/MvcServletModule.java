@@ -240,6 +240,10 @@ public abstract class MvcServletModule extends ServletModule {
 	 * Allows implementation proxy to access the Guice-Servlet syntax serve().with()
 	 * This is needed because the protected permission allows the implementation proxy,
 	 * which is on the same package as this module class, to access this method.
+	 * 
+	 * @param urlPattern Any Servlet-style pattern. examples: /*, /html/*, *.html, etc.
+	 * @param morePatterns Any Servlet-style pattern. examples: /*, /html/*, *.html, etc.
+	 * @return The necessary object for the serve().with() DSL
 	 */
 	protected ServletModule.ServletKeyBindingBuilder _serve(String urlPattern, String... morePatterns) {
 		return serve(urlPattern, morePatterns);

@@ -64,6 +64,11 @@ import com.google.inject.Injector;
 import com.google.inject.Singleton;
 import com.googlecode.gentyref.GenericTypeReflector;
 
+/**
+ * This is the base class you have to subclass to create a web service class
+ * 
+ * @author Salomon BRYS <salomon.brys@gmail.com>
+ */
 @WSInfos(
 		translaters = {
 			DateTranslaterFactory.class,
@@ -73,14 +78,34 @@ import com.googlecode.gentyref.GenericTypeReflector;
 @Singleton
 public abstract class JsonWSController {
 
+	/**
+	 * The description of the WS, which will be generated at startup
+	 */
 	protected WSDescription description;
 
+	/**
+	 * Guice injector
+	 */
 	private Injector injector;
 	
-	private Map<Class<? extends Exception>, WSRuntimeTranslater<?>> runtimeExceptionTranslaters = new HashMap<Class<? extends Exception>, WSRuntimeTranslater<?>>();
+	/**
+	 * TODO: Delete this !
+	 */
+	private Map<Class<? extends Exception>, WSRuntimeTranslater<?>> runtimeExceptionTranslaters = new HashMap<>();
 	
+	/**
+	 * Cache for the {@link #findMethod(String, double)} function
+	 */
+	private Map<String, Method> methodCache = new HashMap<>();
+	
+	/**
+	 * JSON Util that is responsible for transforming Json to Objects and vice versa
+	 */
 	protected SourJsonTransformer jsonTransformer;
 	
+	/**
+	 * @param injector Guice injector
+	 */
 	@Inject
 	public JsonWSController(Injector injector) {
 		this.injector = injector;
@@ -99,17 +124,55 @@ public abstract class JsonWSController {
 		this.jsonTransformer = new SourJsonTransformer(description.translaters.values(), description.knownClasses);
 	}
 
+	/**
+	 * Override this to add plugins to a type / class
+	 * 
+	 * @param cls The class being created
+	 * @param type The java type of the class being processed
+	 */
 	@SuppressWarnings("unused")
 	protected void pluginClass(WSDClass cls, Type type) {}
+	
+	/**
+	 * Override this to add plugins to a field
+	 * 
+	 * @param ref The type to the field being created
+	 * @param field The java field being processed
+	 */
 	@SuppressWarnings("unused")
-	protected void pluginField(WSDTypeReference ref, Field f) {}
+	protected void pluginField(WSDTypeReference ref, Field field) {}
+	
+	/**
+	 * Override this to add plugins to an enum
+	 * 
+	 * @param en The enum being created
+	 * @param cls The java class of the enum being processed
+	 */
 	@SuppressWarnings("unused")
 	protected void pluginEnum(WSDEnum en, Class<?> cls) {}
+	
+	/**
+	 * Override this to add plugins to a method
+	 * 
+	 * @param method The method being created
+	 * @param m The java method being processed
+	 */
 	@SuppressWarnings("unused")
 	protected void pluginMethod(WSDMethod method, Method m) {}
+	
+	/**
+	 * Override this to add plugins to a parameter
+	 * 
+	 * @param param The parameter being created
+	 * @param el The annotations of the parameter being processed
+	 * @param type The type of the parameter being processed
+	 */
 	@SuppressWarnings("unused")
 	protected void pluginParam(WSDMParam param, AnnotatedElement el, Type type) {}
 
+	/**
+	 * @return This class *before* being enhanced by guice (in case of AOP)
+	 */
 	@SuppressWarnings("unchecked")
 	public Class<? extends JsonWSController> getUnmodifiedClass() {
 		Class<? extends JsonWSController> cls = this.getClass();
@@ -118,20 +181,37 @@ public abstract class JsonWSController {
 		return cls;
 	}
 
+	/**
+	 * Get the next JSON element from the request body
+	 * 
+	 * @param req The request to read
+	 * @param cls The class of the element that should be read
+	 * @return The parsed JSON element
+	 * @throws ParseException If a parsing error occurs
+	 * @throws IOException If an input or output error occurs
+	 */
 	@SuppressWarnings("unchecked")
-	protected @CheckForNull <T> T getJsonElement(final HttpServletRequest req, final Class<T> cls) throws ParseException, IOException, JsonTransformException {
+	protected @CheckForNull <T> T getJsonElement(final HttpServletRequest req, final Class<T> cls) throws ParseException, IOException {
 		CharsetDecoder utf8Decoder = Charset.forName("UTF-8").newDecoder();
 		utf8Decoder.onMalformedInput(CodingErrorAction.IGNORE);
 		utf8Decoder.onUnmappableCharacter(CodingErrorAction.IGNORE);
 		Object ret = new JSONParser().parse(new InputStreamReader(req.getInputStream(), utf8Decoder));
 		if (ret == null)
-			throw new JsonTransformException( "Error parsing JSON");
+			throw new ParseException(ParseException.ERROR_UNEXPECTED_EXCEPTION);
 		if (!ret.getClass().equals(cls))
 			throw new IOException("Not a " + cls.getSimpleName());
 		return (T)ret;
 	}
 
-	protected Method findMethod(String function, double version) throws NoSuchMethodException {
+	/**
+	 * Uncached {@link #findMethod(String, double)}
+	 * 
+	 * @param function The name of the method to find
+	 * @param version The version of the WS to use
+	 * @return The method found
+	 * @throws NoSuchMethodException If no method was found
+	 */
+	private Method _findMethod(String function, double version) throws NoSuchMethodException {
 		Class<?> uc = this.getUnmodifiedClass();
 		for (Method method : this.getClass().getMethods()) {
 			Method um = method;
@@ -160,32 +240,86 @@ public abstract class JsonWSController {
 		throw new NoSuchMethodException();
 	}
 	
-	private static enum CallResultStatus {
-		OK,
-		EXCEPTION,
-		RUNTIME_EXCEPTION,
-		CALL_ERROR
+	/**
+	 * Finds a method with the given name (will match the method's annotation if given, or else it's name)
+	 * according to the given version
+	 * This use an internal cache to only look for each method only once
+	 * 
+	 * @param function The name of the method to find
+	 * @param version The version of the WS to use
+	 * @return The method found
+	 * @throws NoSuchMethodException If no method was found
+	 */
+	protected Method findMethod(String function, double version) throws NoSuchMethodException {
+		String cacheStr = function + " - " + version;
+		if (!methodCache.containsKey(cacheStr))
+			methodCache.put(cacheStr, _findMethod(function, version));
+		return methodCache.get(cacheStr);
 	}
 	
+	/**
+	 * Status that can be assign to a Web Service call
+	 */
+	private static enum CallResultStatus {
+		/** The WS call ended normally */				OK,
+		/** The WS call threw an exception */			EXCEPTION,
+		/** The WS call threw a runtime exception */	RUNTIME_EXCEPTION,
+		/** The WS call threw a server error */			CALL_ERROR
+	}
+	
+	/**
+	 * The result of a call is a composition of it's status and it's return value or it's exception
+	 */
 	private static final class CallResult {
+		/**
+		 * Status of the call
+		 */
 		CallResultStatus status = CallResultStatus.OK;
+		
+		/**
+		 * If the status is OK, this is the return value of the call.
+		 * If the status is CALL_ERROR, this is null.
+		 * Else, this is the thrown exception.
+		 */
 		@CheckForNull Object result;
 	}
 	
+	/**
+	 * Exception thrown when a parameter is missing in a call
+	 */
 	private static class NoSuchWSParamException extends Exception
 	{
+		@SuppressWarnings("javadoc")
 		private static final long serialVersionUID = 5701697332216439430L;
 
+		/**
+		 * @param name The name of the missing parameter
+		 * @param cls The type of the missing parameter
+		 * @param notNull Whether or not the parameteris allowed to be null
+		 */
 		public NoSuchWSParamException(String name, Class<?> cls, boolean notNull) {
 			super("Missing " + (notNull ? "NOT NULL" : "") + " parameter " + cls.getSimpleName() + " " + name);
 		}
 	}
 
+	/**
+	 * Makes a call to the given WS function
+	 * 
+	 * @param function The name of the method to call
+	 * @param version The version of the WS to use
+	 * @param jsonObject The JSON object representing the parameters to the call
+	 * @return The result of the WS call
+	 * @throws Throwable If anything went wrong ;)
+	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private CallResult call(final String function, final double version, final JSONObject jsonObject) throws Throwable {
+		// Get the method corresponding to the WS call
 		Method method = findMethod(function, version);
+		// An empty CallResult that will be filled
 		CallResult result = new CallResult();
 		try {
+			// Make the actual call
+			// The given CalltimeArgumentFetcher handles the @WSParam annotated parameters
 			Object ret = injector.getInstance(MvcCaller.class).call(this.getClass(), method, null, true, new CalltimeArgumentFetcher<Object>() {
 				@Override public boolean canGet(Type type, int pos, Annotation[] annos) {
 					return Annotations.fromArray(annos).isAnnotationPresent(WSParam.class);
@@ -198,12 +332,14 @@ public abstract class JsonWSController {
 
 					boolean nullable = annoEl.isAnnotationPresent(WSCheckForNull.class);
 
+					// Throw an exception if the JSON parameter is null and it's not allowed to be
 					if (jsonObject == null) {
 						if (nullable)
 							return null;
 						throw new NoSuchWSParamException(wsParam.value(), clazz, !nullable);
 					}
 
+					// Get the parameter from the JSON using the transformer
 					try {
 						Object obj = jsonTransformer.fromJSON(jsonObject.get(wsParam.value()), type, version, annoEl, null);
 						if (obj == null && !nullable)
@@ -217,6 +353,9 @@ public abstract class JsonWSController {
 				}
 			});
 
+			// If the method is enhanced by Guice, we get the original version
+			// This could be dangerous if we would use this method object to make a call it (as it would prevent Guice AOP)
+			// Be we only use this method object to get it's annotations and informations
 			if (method.getDeclaringClass().getSimpleName().contains("$$EnhancerByGuice$$"))
 				method = method.getDeclaringClass().getSuperclass().getMethod(method.getName(), method.getParameterTypes());
 
@@ -226,20 +365,24 @@ public abstract class JsonWSController {
 				if (Map.class.isAssignableFrom(retClass) || Collection.class.isAssignableFrom(retClass) || Annotations.GetOneTree(method, WSStrict.class) != null)
 					retType = GenericTypeReflector.getExactReturnType(method, this.getClass());
 	
+				// Transform the result from java bean to JSON
 				result.result = jsonTransformer.toJSON(ret, retType, version, method, true, null);
 			}
 		}
+		// Thrown when a parameter is missing
 		catch (NoSuchWSParamException e) {
 			result.status = CallResultStatus.CALL_ERROR;
 			result.result = e.getMessage();
 		}
+		// Thrown when a runtime exception that is to be passed to the client is thrown
 		catch (WSRuntimeException e) {
 			result.status = CallResultStatus.RUNTIME_EXCEPTION;
 			result.result = jsonTransformer.toJSON(e, WSRuntimeException.class, version);
 		}
+		// Any other case
 		catch (Exception e) {
 			Class<?> exClass = e.getClass();
-			
+			// Check that the exception is known by the client
 			if (!description.knownClasses.contains(exClass)) {
 				if (runtimeExceptionTranslaters.containsKey(exClass)) {
 					result.status = CallResultStatus.RUNTIME_EXCEPTION;
@@ -257,6 +400,15 @@ public abstract class JsonWSController {
 		return result;
 	}
 
+	/**
+	 * Get a writer for the response that is configured correctly (content-type & encoding header)
+	 * 
+	 * @param res The current response object from which to get the writer
+	 * @param req The current request object (used to check for specific config)
+	 * @param checkForRaw 
+	 * @return
+	 * @throws IOException
+	 */
 	protected Writer responseWriter(HttpServletResponse res, HttpServletRequest req, boolean checkForRaw) throws IOException {
 		res.setCharacterEncoding("UTF-8");
 		boolean jsonCT = true;

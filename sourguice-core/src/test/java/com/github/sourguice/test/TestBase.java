@@ -18,7 +18,6 @@ import com.google.inject.servlet.GuiceServletContextListener;
 @SuppressWarnings("javadoc")
 public abstract class TestBase {
 
-	@SuppressWarnings("javadoc")
 	public static class StandardContextListener<T extends MvcServletModule> extends GuiceServletContextListener {
 
 		T module;

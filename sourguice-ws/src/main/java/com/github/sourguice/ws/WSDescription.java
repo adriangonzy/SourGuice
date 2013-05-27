@@ -46,36 +46,122 @@ import com.googlecode.gentyref.GenericTypeReflector;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+/**
+ * Represents the architecture of a web services class,
+ * it describes each type, enum and methods.
+ * It is used to be translated into JSON to enable code generation.
+ * This is basically the WSDL of SOAP, but for SourGuice JSON based WS
+ * 
+ * @author Salomon BRYS <salomon.brys@gmail.com>
+ */
 public final class WSDescription implements NoJsonType {
 	
+	/**
+	 * The package of the WS
+	 */
 	public String packageName;
+	
+	/**
+	 * The name of the WS
+	 */
 	public String name;
+	
+	/**
+	 * The default version declared by the WS
+	 */
 	public double defaultVersion;
+	
+	/**
+	 * The base URL for those WS to be prepend to get real WS urls.
+	 */
 	public @CheckForNull String baseUrl;
 	
+	/**
+	 * List of active plugins on this WS.
+	 * This CAN affect code generation (or not).
+	 */
 	public Map<String, Object> plugins = new HashMap<>();
 	
+	/**
+	 * List of type (Java classes) that are handled by these WS
+	 */
 	public Map<String, WSDClass> objectTypes = new HashMap<>();
+
+	/**
+	 * List of enums that are handled by these WS
+	 */
 	public Map<String, WSDEnum> enumTypes = new HashMap<>();
+	
+	/**
+	 * List of Constants that are helpful for these WS
+	 */
 	public Map<String, WSDConstant> constants = new HashMap<>();
+	
+	/**
+	 * List of methods that are callable from these WS
+	 */
 	public Map<String, WSDMethod> methods = new HashMap<>();
 
+	/**
+	 * Count of how much time each class has been look at.
+	 * This is used to detect recursive classes (after 500 passes, an exception is thrown)
+	 */
 	private transient Map<Class<?>, Integer> objectFieldsPasses = new HashMap<>();
 	
+	/**
+	 * List of translaters that will be applicable
+	 */
 	public transient Map<Class<?>, WSTranslaterFactory<?, ?>> translaters = new HashMap<>();
+	
+	/**
+	 * List of known, parsed classes.
+	 * This is useful for external access to check if a particular type has been described
+	 */
 	public transient Set<Class<?>> knownClasses = new HashSet<>();
 	
+	/**
+	 * Controller that can put plugins on various elements
+	 */
 	private transient JsonWSController controller;
 	
+	/**
+	 * Base class for most elements in this description.
+	 * 
+	 * @author Salomon BRYS <salomon.brys@gmail.com>
+	 */
 	public static abstract class Versioned implements NoJsonType {
+		/**
+		 * This states that the element is valid since a particular version
+		 */
 		public @CheckForNull Double since;
+		
+		/**
+		 * This states that the element is valid until a particular version (including)
+		 */
 		public @CheckForNull Double until;
+		
+		/**
+		 * The documentation of the element.
+		 * Used by code generators to generate doc for methods / types / properties / arguments / etc.
+		 */
 		public @CheckForNull String[] doc;
+		
+		/**
+		 * List of active plugins on this element.
+		 * This CAN affect code generation (or not).
+		 */
 		public Map<String, Object> plugins = new HashMap<>();
 
-		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "GSON")
+		/**
+		 * Constructor used by Json parsers to create then fill the objects.
+		 * DO NOT USE MANUALLY!
+		 */
+		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "JSON")
 		private Versioned() {}
 
+		/**
+		 * @param el The element that will be described
+		 */
 		public Versioned(@CheckForNull AnnotatedElement el) {
 			if (el == null)
 				return ;
@@ -91,6 +177,13 @@ public final class WSDescription implements NoJsonType {
 		}
 	}
 	
+	/**
+	 * Utility that get the name of the field,
+	 * either from the WSFieldName annotation or from reflexivity
+	 * 
+	 * @param f The field to get the name
+	 * @return The name
+	 */
 	private static String getFieldName(Field f) {
 		String fieldName = f.getName();
 		WSFieldName wsFieldName = f.getAnnotation(WSFieldName.class);
@@ -99,9 +192,18 @@ public final class WSDescription implements NoJsonType {
 		return fieldName;
 	}
 	
-	@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "GSON")
+	/**
+	 * Constructor used by Json parsers to create then fill the objects.
+	 * DO NOT USE MANUALLY!
+	 */
+	@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "JSON")
 	private WSDescription() {}
-	
+
+	/**
+	 * @param cls The WS class that contains all the WS methods to describe
+	 * @param injector Guice injector
+	 * @param controller Used to plugins
+	 */
 	public WSDescription(Class<?> cls, Injector injector, JsonWSController controller) {
 		this.name = cls.getName();
 		this.packageName = cls.getPackage().getName();
@@ -154,16 +256,42 @@ public final class WSDescription implements NoJsonType {
 		}
 	}
 	
+	/**
+	 * A class that will be handled (in or out) by the web services.
+	 */
 	public final class WSDClass extends Versioned {
+		/**
+		 * It's super class
+		 */
 		public @CheckForNull String parent = null;
+		
+		/**
+		 * Whether or not this in an abstract class
+		 */
 		public @CheckForNull Boolean isAbstract;
+		
+		/**
+		 * List of properties
+		 */
 		public Map<String, WSDTypeReference> properties = new HashMap<>();
+		
+		/**
+		 * List of constants defined within it's scope.
+		 */
 		@SuppressWarnings("hiding")
 		public Map<String, WSDConstant> constants = new HashMap<>();
 		
-		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "GSON")
+		/**
+		 * Constructor used by Json parsers to create then fill the objects.
+		 * DO NOT USE MANUALLY!
+		 */
+		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "JSON")
 		private WSDClass() {}
 
+		/**
+		 * @param type The type to describe
+		 * @param typeName It's name
+		 */
 		public WSDClass(Type type, String typeName) {
 			super(GenericTypeReflector.erase(type));
 			Class<?> cls = GenericTypeReflector.erase(type);
@@ -202,9 +330,23 @@ public final class WSDescription implements NoJsonType {
 		}
 	}
 
+	/**
+	 * A constant used by WS
+	 */
 	public final class WSDConstant extends Versioned {
+		/**
+		 * It's type
+		 */
 		public WSDType type;
+		
+		/**
+		 * It's value
+		 */
 		public Object value;
+		
+		/**
+		 * @param f The constant field to describe
+		 */
 		public WSDConstant(Field f) {
 			super(f);
 			Class<?> cls = f.getType();
@@ -230,12 +372,26 @@ public final class WSDescription implements NoJsonType {
 		}
 	}
 	
+	/**
+	 * An enum that will be handled (in or out) by the web services.
+	 */
 	public final class WSDEnum extends Versioned {
+		/**
+		 * List of enum values
+		 */
 		public List<String> values = new LinkedList<>();
-		
-		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "GSON")
+
+		/**
+		 * Constructor used by Json parsers to create then fill the objects.
+		 * DO NOT USE MANUALLY!
+		 */
+		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "JSON")
 		private WSDEnum() {}
 
+		/**
+		 * @param cls The enum type to describe
+		 * @param typeName It's name
+		 */
 		public WSDEnum(Class<?> cls, String typeName) {
 			super(cls);
 			for (Object c : cls.getEnumConstants())
@@ -246,47 +402,89 @@ public final class WSDescription implements NoJsonType {
 		}
 	}
 
+	/**
+	 * A method in the WS class
+	 */
 	public final class WSDMethod extends Versioned {
+		/**
+		 * The method's parameters
+		 */
 		public @CheckForNull Map<String, WSDMParam> params;
+		
+		/**
+		 * The type of the return of the method
+		 */
 		public WSDTypeReference returns;
+		
+		/**
+		 * List of exceptions declared by this method
+		 */
 		public List<WSDTypeReference> exceptions;
 		
-		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "GSON")
+		/**
+		 * Constructor used by Json parsers to create then fill the objects.
+		 * DO NOT USE MANUALLY!
+		 */
+		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "JSON")
 		private WSDMethod() {}
 		
-		public WSDMethod(Class<?> cls, Method m, WSMethod a) {
-			super(m);
-			String methodName = a.name();
+		/**
+		 * @param cls The class of the method to describe
+		 * @param method The method to describe
+		 * @param anno The WSMethod annotating this method
+		 */
+		public WSDMethod(Class<?> cls, Method method, WSMethod anno) {
+			super(method);
+			String methodName = anno.name();
 			if (methodName.isEmpty())
-				methodName = m.getName();
+				methodName = method.getName();
 			methods.put(methodName, this);
 
-			this.returns = new WSDTypeReference(GenericTypeReflector.getExactReturnType(m, cls), null, null);
+			this.returns = new WSDTypeReference(GenericTypeReflector.getExactReturnType(method, cls), null, null);
 			
-			Type[] paramTypes = GenericTypeReflector.getExactParameterTypes(m, cls);
-			Annotation[][] paramAnnos = m.getParameterAnnotations();
+			Type[] paramTypes = GenericTypeReflector.getExactParameterTypes(method, cls);
+			Annotation[][] paramAnnos = method.getParameterAnnotations();
 			for (int i = 0; i < paramTypes.length; ++i) {
 				WSParam wsParam = Annotations.GetOneRecursive(WSParam.class, paramAnnos[i]);
 				if (wsParam != null)
 					new WSDMParam(wsParam, Annotations.fromArray(paramAnnos[i]), paramTypes[i]);
 			}
 			
-			for (Type exceptionType : m.getGenericExceptionTypes()) {
+			for (Type exceptionType : method.getGenericExceptionTypes()) {
 				if (exceptions == null)
 					exceptions = new ArrayList<>();
 				if (Annotations.GetOneTreeRecursive(GenericTypeReflector.erase(exceptionType), WSException.class) != null)
 					exceptions.add(new WSDTypeReference(exceptionType, null, null));
 			}
-			controller.pluginMethod(this, m);
+			controller.pluginMethod(this, method);
 		}
 
+		/**
+		 * Parameter of a method
+		 */
 		public final class WSDMParam extends Versioned {
+			/**
+			 * Position of the parameter
+			 */
 			public int position;
+			
+			/**
+			 * Type of the parameter
+			 */
 			public WSDTypeReference type;
 			
-			@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "GSON")
+			/**
+			 * Constructor used by Json parsers to create then fill the objects.
+			 * DO NOT USE MANUALLY!
+			 */
+			@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "JSON")
 			private WSDMParam() {}
-			
+
+			/**
+			 * @param wsParam The WSParam annotation annotating this param
+			 * @param el The annotated element representing this parameter
+			 * @param type The type of the parameter
+			 */
 			public WSDMParam(WSParam wsParam, AnnotatedElement el, Type type) {
 				super(el);
 				
@@ -305,18 +503,62 @@ public final class WSDescription implements NoJsonType {
 		
 	}
 	
-	public enum WSDType { VOID, BOOLEAN_P, BOOLEAN_O, INT_P, INT_O, FLOAT_P, FLOAT_O, STRING, LIST, MAP, ENUM, DATE, OBJECT };
+	/**
+	 * The standard types known by SourGuice-WS code generators.
+	 */
+	public enum WSDType {
+		/** void */											VOID,
+		/** Primitive boolean */							BOOLEAN_P,
+		/** Boolean object */								BOOLEAN_O,
+		/** Primitive int */								INT_P,
+		/** Integer object */								INT_O,
+		/** Primitive float */								FLOAT_P,
+		/** Float object */									FLOAT_O,
+		/** String object */								STRING,
+		/** Collection */									COLLECTION,
+		/** Map */											MAP,
+		/** Enum type */									ENUM,
+		/** Date (java.util.Date) */						DATE,
+		/** Any other object (composed by properties) */	OBJECT
+	};
 
+	/**
+	 * A reference to a type
+	 */
 	public final class WSDTypeReference extends Versioned {
 		
+		/**
+		 * The type (class) of the reference
+		 */
 		public WSDType type;
+		
+		/**
+		 * The name of the reference
+		 */
 		public String ref;
-		public @CheckForNull WSDTypeReference collectionType;
+		
+		/**
+		 * The generic type parameters (if any)
+		 */
+		public @CheckForNull List<WSDTypeReference> parameterTypes;
+		
+		/**
+		 * Whether or not this can be transmitted null (only when reference is a parameter)
+		 */
 		public @CheckForNull Boolean nullable;
 		
-		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "GSON")
+		/**
+		 * Constructor used by Json parsers to create then fill the objects.
+		 * DO NOT USE MANUALLY!
+		 */
+		@SuppressFBWarnings(value = "NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR", justification = "JSON")
 		private WSDTypeReference() {}
-		
+
+		/**
+		 * @param type The type of the reference
+		 * @param el The annotated element representing the reference
+		 * @param cause What caused this reference (for internal count with {@link WSDescription#objectFieldsPasses})
+		 */
 		public WSDTypeReference(Type type, @CheckForNull AnnotatedElement el, @CheckForNull final Field cause) {
 			super(el);
 			if (type instanceof WildcardType)
@@ -362,14 +604,16 @@ public final class WSDescription implements NoJsonType {
 			}
 			
 			else if (cls.isArray()) {
-				this.type = WSDType.LIST;
-				this.collectionType = new WSDTypeReference(GenericTypeReflector.getArrayComponentType(type), null, null);
+				this.type = WSDType.COLLECTION;
+				parameterTypes = new ArrayList<>(1);
+				this.parameterTypes.add(new WSDTypeReference(GenericTypeReflector.getArrayComponentType(type), null, null));
 			}
 
 			else if (Collection.class.isAssignableFrom(cls)) {
-				this.type = WSDType.LIST;
+				this.type = WSDType.COLLECTION;
+				parameterTypes = new ArrayList<>(1);
 				ParameterizedType listType = (ParameterizedType)GenericTypeReflector.getExactSuperType(type, Collection.class);
-				this.collectionType = new WSDTypeReference(listType.getActualTypeArguments()[0], null, cause);
+				this.parameterTypes.add(new WSDTypeReference(listType.getActualTypeArguments()[0], null, cause));
 			}
 			
 			else if (Map.class.isAssignableFrom(cls)) {
@@ -377,7 +621,8 @@ public final class WSDescription implements NoJsonType {
 				ParameterizedType mapType = (ParameterizedType)GenericTypeReflector.getExactSuperType(type, Map.class);
 				if (!String.class.isAssignableFrom(GenericTypeReflector.erase(mapType.getActualTypeArguments()[0])))
 					throw new RuntimeException("Map first generic argument must be a String in " + cause);
-				this.collectionType = new WSDTypeReference(mapType.getActualTypeArguments()[1], null, cause);
+				parameterTypes = new ArrayList<>(1);
+				this.parameterTypes.add(new WSDTypeReference(mapType.getActualTypeArguments()[1], null, cause));
 			}
 			
 			else if (Date.class.isAssignableFrom(cls)) {
